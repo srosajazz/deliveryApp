@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from .models import Produto, Categoria, Opcoes, Adicional
 
@@ -37,13 +37,15 @@ def produto(request, id):
                                             'erro': erro})
 
 # Ckeckout cart
+# def add_carrinho(request):
+#     return HttpResponse('1')
 def add_carrinho(request):
     if not request.session.get('carrinho'):
         request.session['carrinho'] = []
         request.session.save()
 
     x = dict(request.POST)
-
+    # return HttpResponse(x.items())
     def removeLixo():
         adicionais = x.copy()
         adicionais.pop('id')
@@ -54,9 +56,9 @@ def add_carrinho(request):
 
         return adicionais
         
-    adicionais = removeLixo(x)    
-
-
+    adicionais = removeLixo() 
+    # return HttpResponse(adicionais)   
+    # return HttpResponse(x.items())   
     id = int(x['id'][0])
     preco_total = Produto.objects.filter(id=id)[0].preco
     adicionais_verifica =  Adicional.objects.filter(produto = id)
@@ -104,3 +106,30 @@ def add_carrinho(request):
     request.session.save()
     #return HttpResponse(request.session['carrinho'])
     return redirect(f'/ver_carrinho')
+
+
+
+
+def ver_carrinho(request):
+    categorias = Categoria.objects.all()
+    dados_motrar = []
+    for i in request.session['carrinho']:
+        prod = Produto.objects.filter(id=i['id_produto'])
+        dados_motrar.append(
+            {'imagem': prod[0].img.url,
+             'nome': prod[0].nome_produto,
+             'quantidade': i['quantidade'],
+             'preco': i['preco'],
+             'id': i['id_produto']
+             }
+        )
+    total = sum([float(i['preco']) for i in request.session['carrinho']])
+    return render(request, 'carrinho.html', {'dados': dados_motrar,
+                                             'total': total,
+                                             'carrinho': len(request.session['carrinho']),
+                                             'categorias': categorias,
+                                             })
+def remover_carrinho(request, id):
+    request.session['carrinho'].pop(id)
+    request.session.save()
+    return redirect('/ver_carrinho')
